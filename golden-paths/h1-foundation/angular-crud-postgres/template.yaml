@@ -1,0 +1,64 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: angular-crud-postgres
+  title: Angular SPA con Postgres
+  description: >
+    Genera un proyecto Angular CRUD con backend Postgres + PostgREST,
+    basado en angular-crud-spa, y lo publica como repo nuevo en
+    github.com/ramisistemas. No registra el componente en el catálogo.
+  tags:
+    - angular
+    - postgres
+    - crud
+spec:
+  owner: user:default/ramisistemas
+  type: website
+
+  parameters:
+    - title: Datos del proyecto
+      required:
+        - name
+        - dbName
+        - owner
+      properties:
+        name:
+          title: Nombre del proyecto
+          type: string
+          description: Se usa en package.json, angular.json, catalog-info.yaml y como nombre del repo nuevo en GitHub
+          default: mi-proyecto-angular
+        dbName:
+          title: Nombre de la base de datos
+          type: string
+          description: Nombre de la base Postgres (evita chocar con "appdb" si ya existe una)
+          default: appdb
+        owner:
+          title: Owner
+          type: string
+          description: Equipo o persona dueña del componente (se guarda en catalog-info.yaml, no se registra automáticamente)
+          default: user:default/ramisistemas
+
+  steps:
+    - id: fetch
+      name: Copiar plantilla
+      action: fetch:template
+      input:
+        url: ./skeleton/app
+        values:
+          name: ${{ parameters.name }}
+          dbName: ${{ parameters.dbName }}
+          owner: ${{ parameters.owner }}
+
+    - id: publish
+      name: Publicar en GitHub
+      action: publish:github
+      input:
+        repoUrl: github.com?repo=${{ parameters.name }}&owner=ramisistemas
+        description: Generado desde la plantilla angular-crud-postgres
+        repoVisibility: private
+        defaultBranch: main
+
+  output:
+    links:
+      - title: Repositorio en GitHub
+        url: ${{ steps.publish.output.remoteUrl }}

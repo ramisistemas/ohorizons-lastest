@@ -255,6 +255,10 @@ catalog:
       target: ../../../golden-paths/h1-foundation/security-baseline/template.yaml
       rules:
         - allow: [Template]
+    - type: file
+      target: ../../../golden-paths/h1-foundation/angular-crud-postgres/template.yaml
+      rules:
+        - allow: [Template]
 
     # -----------------------------------------------------------------
     # H2 Enhancement Golden Path Templates (10)

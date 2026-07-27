@@ -1,0 +1,27 @@
+<form class="form" [formGroup]="form" (ngSubmit)="submit()">
+  <h2>{{ isEditing ? 'Editar tarea' : 'Nueva tarea' }}</h2>
+
+  <label>
+    Título
+    <input type="text" formControlName="title" />
+  </label>
+
+  <label>
+    Notas
+    <textarea formControlName="notes" rows="2"></textarea>
+  </label>
+
+  <label class="checkbox">
+    <input type="checkbox" formControlName="done" />
+    Completada
+  </label>
+
+  <p *ngIf="error" class="error">{{ error }}</p>
+
+  <div class="buttons">
+    <button type="submit" [disabled]="form.invalid || submitting">
+      {{ isEditing ? 'Guardar cambios' : 'Crear' }}
+    </button>
+    <button type="button" *ngIf="isEditing" (click)="cancel()">Cancelar</button>
+  </div>
+</form>

@@ -1,0 +1,25 @@
+<section class="list">
+  <h2>Tareas</h2>
+
+  <p *ngIf="loading">Cargando...</p>
+  <p *ngIf="error" class="error">{{ error }}</p>
+  <p *ngIf="!loading && !error && tasks.length === 0">No hay tareas todavía.</p>
+
+  <ul *ngIf="!loading && tasks.length > 0">
+    <li *ngFor="let task of tasks" [class.done]="task.done">
+      <label class="check">
+        <input type="checkbox" [checked]="task.done" (change)="toggleDone(task)" />
+      </label>
+
+      <div class="content">
+        <strong>{{ task.title }}</strong>
+        <span *ngIf="task.notes">{{ task.notes }}</span>
+      </div>
+
+      <div class="actions">
+        <button type="button" (click)="edit.emit(task)">Editar</button>
+        <button type="button" class="danger" (click)="remove(task)">Eliminar</button>
+      </div>
+    </li>
+  </ul>
+</section>

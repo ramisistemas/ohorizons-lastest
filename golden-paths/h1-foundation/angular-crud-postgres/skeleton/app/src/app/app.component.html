@@ -1,0 +1,18 @@
+<div class="page">
+  <header>
+    <h1>Angular CRUD SPA</h1>
+    <p>CRUD básico contra una API PostgREST.</p>
+  </header>
+
+  <app-task-form
+    [task]="editingTask()"
+    (saved)="onSaved()"
+    (cancelled)="onCancelEdit()"
+  ></app-task-form>
+
+  <app-task-list
+    [refreshToken]="refreshToken()"
+    (edit)="onEdit($event)"
+    (changed)="onSaved()"
+  ></app-task-list>
+</div>

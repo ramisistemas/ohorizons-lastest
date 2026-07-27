@@ -1,0 +1,9 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{ values.name }}
+  description: Angular SPA con backend Postgres/PostgREST, generado desde la plantilla angular-crud-postgres
+spec:
+  type: website
+  lifecycle: experimental
+  owner: ${{ values.owner }}
