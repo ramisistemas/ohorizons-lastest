@@ -1,0 +1,11 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: spa-angular-crud
+  description: Angular SPA con backend Postgres/PostgREST
+  annotations:
+    github.com/project-slug: SuraOhorizons/spa-angular-crud
+spec:
+  type: website
+  lifecycle: experimental
+  owner: platform-engineering

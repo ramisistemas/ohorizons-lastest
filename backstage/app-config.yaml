@@ -229,7 +229,7 @@ catalog:
       target: ../../examples/entities.yaml
 
     # -----------------------------------------------------------------
-    # H1 Foundation Golden Path Templates (6)
+    # H1 Foundation Golden Path Templates (8)
     # -----------------------------------------------------------------
     - type: file
       target: ../../../golden-paths/h1-foundation/web-application/template.yaml
@@ -237,6 +237,10 @@ catalog:
         - allow: [Template]
     - type: file
       target: ../../../golden-paths/h1-foundation/new-microservice/template.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ../../../golden-paths/h1-foundation/tasks-api/template.yaml
       rules:
         - allow: [Template]
     - type: file

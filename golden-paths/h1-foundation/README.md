@@ -11,6 +11,7 @@ Foundation-level templates for basic infrastructure and application scaffolding.
 | `infrastructure-provisioning` | Terraform module scaffolding | Medium |
 | `new-microservice` | Basic microservice starter | Simple |
 | `security-baseline` | Security configuration baseline | Medium |
+| `tasks-api` | CRUD REST de tareas sobre PostgreSQL (reemplazo de PostgREST) | Simple |
 | `web-application` | Full-stack web application | Medium |
 
 ## Template Details
@@ -46,6 +47,14 @@ Creates a basic microservice with:
 - Dockerfile
 - Basic CI/CD
 - Health endpoint
+
+### tasks-api
+
+Creates a Node.js/Express CRUD REST backend for tasks, backed by PostgreSQL:
+- Health/ready/metrics endpoints (Prometheus via `prom-client`)
+- `pg` client with schema bootstrap on startup
+- Kubernetes manifests with `ExternalSecret` for `DATABASE_URL`
+- CI with lint, tests against a real Postgres service container, security scan and build+push
 
 ### security-baseline
 

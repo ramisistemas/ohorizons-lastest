@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${{values.name}}-config
+  namespace: ${{values.namespace}}
+  labels:
+    app: ${{values.name}}
+data:
+  LOG_LEVEL: "info"
+  NODE_ENV: "production"
+  ALLOWED_ORIGIN: "${{values.allowedOrigin}}"

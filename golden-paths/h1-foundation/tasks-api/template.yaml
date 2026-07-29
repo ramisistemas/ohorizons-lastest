@@ -1,0 +1,218 @@
+# =============================================================================
+# OPEN HORIZONS PLATFORM - H1 TASKS API GOLDEN PATH TEMPLATE
+# =============================================================================
+#
+# Backstage Software Template para el backend CRUD de tareas que reemplaza a
+# PostgREST en la demo de Open Horizons (ver OHORIZONS_MS_DEMO_CORRECTA.md).
+# Node.js (Express) + pg + prom-client, listo para AKS vía ArgoCD.
+#
+# Horizon: H1 - Foundation
+# Use Case: Scaffold del backend de la demo ohorizons_ms / ohorizons-tasks-api
+#
+# =============================================================================
+
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: h1-tasks-api
+  title: "Tasks API (Node.js + PostgreSQL)"
+  description: |
+    Crea un microservicio Node.js/Express con CRUD REST de tareas sobre
+    PostgreSQL (reemplazo de PostgREST), listo con CI/CD, manifiestos
+    Kubernetes y ExternalSecret para DATABASE_URL.
+  tags:
+    - h1-foundation
+    - microservice
+    - nodejs
+    - express
+    - postgresql
+    - tasks-api
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+  links:
+    - title: Open Horizons Guide
+      url: https://github.com/Ohorizons/open-horizons-platform
+
+spec:
+  owner: platform-engineering
+  type: service
+
+  parameters:
+    - title: Service Information
+      required:
+        - name
+        - owner
+      properties:
+        name:
+          title: Service Name
+          description: Nombre único del microservicio (minúsculas, guiones)
+          type: string
+          pattern: '^[a-z][a-z0-9-]*$'
+          maxLength: 50
+          default: ohorizons-tasks-api
+          ui:autofocus: true
+
+        description:
+          title: Description
+          description: Breve descripción del microservicio
+          type: string
+          default: API CRUD de tareas para demo Open Horizons
+          maxLength: 300
+
+        owner:
+          title: Owner
+          description: Equipo dueño del servicio
+          type: string
+          ui:field: OwnerPicker
+          ui:options:
+            catalogFilter:
+              kind: Group
+
+        system:
+          title: System
+          description: Sistema al que pertenece este servicio
+          type: string
+          default: openhorizons-demo
+          ui:field: EntityPicker
+          ui:options:
+            catalogFilter:
+              kind: System
+
+        lifecycle:
+          title: Lifecycle
+          description: Etapa del servicio
+          type: string
+          default: production
+          enum:
+            - experimental
+            - production
+            - deprecated
+          enumNames:
+            - Experimental
+            - Production
+            - Deprecated
+
+    - title: Repository Configuration
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+
+        registry:
+          title: Container Registry
+          description: Registro donde se publica la imagen (ej. ghcr.io/tu-org)
+          type: string
+          default: ghcr.io/ohorizons
+
+    - title: Runtime & Database
+      required:
+        - namespace
+        - databaseSecretKey
+      properties:
+        namespace:
+          title: Kubernetes Namespace
+          description: Namespace de AKS donde corre el servicio
+          type: string
+          default: demo-ohorizons
+
+        databaseSecretKey:
+          title: Database Secret Key (Key Vault)
+          description: |
+            Nombre del secreto en Key Vault con la connection string de Postgres
+            (ver sección "Secreto recomendado" en OHORIZONS_MS_DEMO_CORRECTA.md).
+            Usar tasksdb-connection-string para una demo seria, o
+            postgresql-connection-string solo como opción temporal.
+          type: string
+          default: tasksdb-connection-string
+
+        allowedOrigin:
+          title: CORS Allowed Origin
+          description: Origen permitido para llamadas desde el frontend (ohorizons_ms)
+          type: string
+          default: "*"
+
+    - title: Azure Deployment
+      description: Baseline opcional de infraestructura Azure
+      properties:
+        deployToAzure:
+          title: Provision Azure Infrastructure
+          description: |
+            Esta demo reutiliza el AKS/PostgreSQL ya desplegados por la plataforma,
+            así que por defecto queda deshabilitado (ver OHORIZONS_MS_DEMO_CORRECTA.md).
+          type: boolean
+          default: false
+
+  steps:
+    - id: fetch-template
+      name: Fetch Tasks API Template
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          description: ${{ parameters.description }}
+          owner: ${{ parameters.owner }}
+          system: ${{ parameters.system }}
+          lifecycle: ${{ parameters.lifecycle }}
+          repoUrl: ${{ parameters.repoUrl }}
+          registry: ${{ parameters.registry }}
+          namespace: ${{ parameters.namespace }}
+          databaseSecretKey: ${{ parameters.databaseSecretKey }}
+          allowedOrigin: ${{ parameters.allowedOrigin }}
+
+    # --------------------------------------------------------------------------
+    # Inject Copilot Agents (Pipeline, Sentinel, Compass)
+    # --------------------------------------------------------------------------
+    - id: add-copilot-agents
+      name: Add Copilot AI Agents
+      action: fetch:plain
+      input:
+        url: ../../common/agents
+        targetPath: .
+
+    # --------------------------------------------------------------------------
+    # Generate Azure Infrastructure Baseline (opcional)
+    # --------------------------------------------------------------------------
+    - id: add-azure-infrastructure
+      name: Add Azure Infrastructure Baseline
+      if: "${{ parameters.deployToAzure }}"
+      action: fetch:template
+      input:
+        url: ../../common/azure-infrastructure
+        targetPath: .
+        values:
+          name: "${{ parameters.name }}"
+          environment: dev
+          azureRegion: centralus
+          workloadType: "h1-tasks-api"
+
+    - id: publish
+      name: Create GitHub Repository
+      action: publish:github
+      input:
+        repoUrl: ${{ parameters.repoUrl }}
+        description: "${{ parameters.description }}"
+        defaultBranch: main
+        repoVisibility: public
+        protectDefaultBranch: true
+
+    - id: register
+      name: Register in Catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps['publish'].output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
+
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps['publish'].output.remoteUrl }}
+      - title: Open in Catalog
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}
