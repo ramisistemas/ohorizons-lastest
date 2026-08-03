@@ -1,38 +1,24 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: ${{values.name | dump}}
-  description: ${{values.description | dump}}
-  annotations:
-    github.com/project-slug: ${{values.repoUrl | parseRepoUrl | pick('owner') }}/${{values.name}}
-    backstage.io/techdocs-ref: dir:.
-    argocd/app-name: ${{values.name}}
-  tags:
-    - microservice
-    - nodejs
-    - tasks-api
-    - h1-foundation
-  links:
-    - url: https://github.com/${{values.repoUrl | parseRepoUrl | pick('owner') }}/${{values.name}}
-      title: GitHub Repository
-      icon: github
+  name: ${{ values.name }}
+  description: API CRUD de tareas para demo Open Horizons, generado desde la plantilla tasks-api
 spec:
   type: service
-  lifecycle: ${{values.lifecycle}}
-  owner: ${{values.owner}}
-  system: ${{values.system}}
+  lifecycle: experimental
+  owner: ${{ values.owner }}
   providesApis:
-    - ${{values.name}}-api
+    - ${{ values.name }}-api
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API
 metadata:
-  name: ${{values.name}}-api
-  description: CRUD API de tareas para ${{values.name}}
+  name: ${{ values.name }}-api
+  description: CRUD API de tareas para ${{ values.name }}
 spec:
   type: openapi
-  lifecycle: ${{values.lifecycle}}
-  owner: ${{values.owner}}
+  lifecycle: experimental
+  owner: ${{ values.owner }}
   definition: |
     openapi: 3.0.0
     info:

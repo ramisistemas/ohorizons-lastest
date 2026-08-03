@@ -1,7 +1,7 @@
 {
   "name": "${{values.name}}",
   "version": "1.0.0",
-  "description": "${{values.description}}",
+  "description": "API CRUD de tareas para demo Open Horizons",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

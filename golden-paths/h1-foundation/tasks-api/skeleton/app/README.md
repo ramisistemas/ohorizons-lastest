@@ -1,6 +1,6 @@
 # ${{values.name}}
 
-${{values.description}}
+API CRUD de tareas para demo Open Horizons
 
 ## Overview
 
@@ -11,9 +11,6 @@ Reemplaza a PostgREST: expone la misma forma de contrato REST que ya usa la SPA 
 | Property | Value |
 |----------|-------|
 | Owner | ${{values.owner}} |
-| System | ${{values.system}} |
-| Lifecycle | ${{values.lifecycle}} |
-| Namespace | ${{values.namespace}} |
 
 ## Getting Started
 
@@ -37,15 +34,6 @@ DATABASE_URL=postgres://appuser:apppass@localhost:5432/tasksdb npm test
 
 # Construir imagen Docker
 docker build -t ${{values.name}}:local .
-```
-
-### Deployment
-
-Este servicio se despliega vía ArgoCD. Los cambios en `main` disparan el pipeline de CI que
-construye y publica la imagen; ArgoCD sincroniza `deploy/` hacia el namespace `${{values.namespace}}`.
-
-```bash
-kubectl apply -k deploy/
 ```
 
 ## API Endpoints
@@ -86,15 +74,10 @@ src/
 ## Base de datos
 
 Al arrancar, el servicio ejecuta `ensureSchema()` (`src/db/queries.js`), que crea la tabla
-`tasks` si no existe. Para producción, `DATABASE_URL` llega vía `ExternalSecret`
-(`deploy/external-secret.yaml`) apuntando al secreto `${{values.databaseSecretKey}}` en Key Vault.
+`tasks` si no existe.
 
 ## Monitoring
 
 - Métricas: disponibles en `/metrics` en formato Prometheus
 - Logs: JSON estructurado a stdout
 - Readiness: `/ready` valida conexión real a Postgres (`select 1`)
-
-## Links
-
-- [Open Horizons Documentation](https://github.com/${{values.repoUrl | parseRepoUrl | pick('owner') }}/open-horizons-platform)
