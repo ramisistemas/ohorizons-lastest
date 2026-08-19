@@ -1,0 +1,217 @@
+# =============================================================================
+# OPEN HORIZONS PLATFORM - H1 JAVA MICROSERVICE GOLDEN PATH TEMPLATE
+# =============================================================================
+#
+# Backstage Software Template para microservicios Java 21 + Spring Boot,
+# alineado a la LBA (Lista de Bienes Aprobados) de la compañía.
+# Arquitectura Clean/Hexagonal (domain / usecase / infrastructure), igual al
+# patrón que genera la herramienta interna "Rocket".
+#
+# Horizon: H1 - Foundation
+# Clasificación LBA: Java 21 (Verde) · Spring Boot (Verde) · Azure (Verde) · AKS
+#
+# =============================================================================
+
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: h1-java-microservice
+  title: "H1: Java 21 + Spring Boot Microservice (LBA)"
+  description: |
+    Crea un microservicio Java 21 + Spring Boot con arquitectura Clean/Hexagonal,
+    alineado a la LBA, con Maven, Docker, CI/CD en GitHub Actions y despliegue
+    en Azure AKS vía Kubernetes + Kustomize.
+  tags:
+    - h1-foundation
+    - java
+    - spring-boot
+    - maven
+    - lba
+    - recommended
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+
+spec:
+  owner: platform-engineering
+  type: service
+
+  parameters:
+    # -------------------------------------------------------------------------
+    # Datos del proyecto
+    # -------------------------------------------------------------------------
+    - title: Datos del proyecto
+      required:
+        - name
+        - owner
+      properties:
+        name:
+          title: Nombre de aplicación
+          description: Nombre del microservicio (minúsculas, guiones permitidos). Se usa como nombre del repo, del artefacto Maven y del paquete Java.
+          type: string
+          pattern: '^[a-z][a-z0-9-]{2,40}$'
+          ui:autofocus: true
+          ui:help: 'Ejemplo: orders-service, payments-api'
+        description:
+          title: Descripción
+          type: string
+          maxLength: 300
+        owner:
+          title: Owner
+          description: Equipo dueño del servicio
+          type: string
+          ui:field: OwnerPicker
+          ui:options:
+            catalogFilter:
+              kind: Group
+        system:
+          title: System
+          description: Sistema al que pertenece este servicio
+          type: string
+          ui:field: EntityPicker
+          ui:options:
+            catalogFilter:
+              kind: System
+
+    # -------------------------------------------------------------------------
+    # Clasificación LBA (gobierno tecnológico) — fija, no editable
+    # -------------------------------------------------------------------------
+    - title: Clasificación LBA (gobierno tecnológico)
+      description: Estos valores están fijados por la LBA y no son editables desde el wizard.
+      properties:
+        language:
+          title: Lenguaje
+          type: string
+          default: "Java 21"
+          ui:disabled: true
+        framework:
+          title: Framework
+          type: string
+          default: "Spring Boot"
+          ui:disabled: true
+        buildTool:
+          title: Build Tool
+          type: string
+          default: "Maven"
+          ui:disabled: true
+        cloud:
+          title: Cloud
+          type: string
+          default: "Azure"
+          ui:disabled: true
+        platform:
+          title: Plataforma
+          type: string
+          default: "AKS"
+          ui:disabled: true
+
+    # -------------------------------------------------------------------------
+    # CI/CD y despliegue
+    # -------------------------------------------------------------------------
+    - title: CI/CD y despliegue
+      required:
+        - registry
+        - namespace
+      properties:
+        createCI:
+          title: Crear CI
+          description: Genera el workflow de integración continua (build + test en cada push/PR)
+          type: boolean
+          default: true
+        createCD:
+          title: Crear CD
+          description: Genera el workflow de entrega continua (build + push de imagen a ACR)
+          type: boolean
+          default: true
+        registry:
+          title: Container Registry
+          type: string
+          description: Registro donde CI publica la imagen
+          default: crsuradev.azurecr.io
+        namespace:
+          title: Kubernetes Namespace
+          type: string
+          description: Namespace de AKS donde ArgoCD despliega el servicio
+          default: default
+        minReplicas:
+          title: Réplicas mínimas (HPA)
+          type: integer
+          default: 2
+          minimum: 1
+        maxReplicas:
+          title: Réplicas máximas (HPA)
+          type: integer
+          default: 5
+          minimum: 1
+
+  steps:
+    - id: fetch-app
+      name: Copiar código de la aplicación (Maven multi-módulo, Clean Architecture)
+      action: fetch:template
+      input:
+        url: ./skeleton/app
+        values:
+          name: ${{ parameters.name }}
+          description: ${{ parameters.description }}
+          owner: ${{ parameters.owner }}
+          system: ${{ parameters.system }}
+          registry: ${{ parameters.registry }}
+
+    - id: fetch-ci
+      name: Copiar workflow de CI
+      action: fetch:template
+      if: ${{ parameters.createCI }}
+      input:
+        url: ./skeleton/ci
+        targetPath: ./.github/workflows
+        values:
+          name: ${{ parameters.name }}
+
+    - id: fetch-cd
+      name: Copiar workflow de CD
+      action: fetch:template
+      if: ${{ parameters.createCD }}
+      input:
+        url: ./skeleton/cd
+        targetPath: ./.github/workflows
+        values:
+          name: ${{ parameters.name }}
+          registry: ${{ parameters.registry }}
+
+    - id: fetch-deploy
+      name: Copiar manifiestos de despliegue (Kubernetes + Kustomize)
+      action: fetch:template
+      input:
+        url: ./skeleton/deploy
+        targetPath: ./deploy
+        values:
+          name: ${{ parameters.name }}
+          namespace: ${{ parameters.namespace }}
+          system: ${{ parameters.system }}
+          registry: ${{ parameters.registry }}
+          minReplicas: ${{ parameters.minReplicas }}
+          maxReplicas: ${{ parameters.maxReplicas }}
+
+    - id: publish
+      name: Publicar en GitHub
+      action: publish:github
+      input:
+        repoUrl: github.com?repo=${{ parameters.name }}&owner=SuraOhorizons
+        description: ${{ parameters.description }}
+        defaultBranch: main
+        repoVisibility: internal
+        protectDefaultBranch: true
+
+    - id: register
+      name: Registrar en el catálogo
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
+
+  output:
+    links:
+      - title: Repositorio en GitHub
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Abrir en el catálogo
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}
