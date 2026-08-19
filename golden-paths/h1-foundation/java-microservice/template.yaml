@@ -97,6 +97,8 @@ spec:
             - "Java 17"
           not:
             const: "Java 17"
+          errorMessage:
+            not: "Java 17 no cumple con la clasificación LBA (Verde). Elegí Java 21."
           default: "Java 21"
         framework:
           title: Framework
@@ -107,6 +109,8 @@ spec:
             - "Quarkus"
           not:
             const: "Quarkus"
+          errorMessage:
+            not: "Quarkus no cumple con la clasificación LBA (Verde). Elegí Spring Boot."
           default: "Spring Boot"
         buildTool:
           title: Build Tool
