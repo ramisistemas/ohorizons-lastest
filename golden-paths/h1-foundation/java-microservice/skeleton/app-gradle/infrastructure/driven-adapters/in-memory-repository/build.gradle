@@ -1,0 +1,16 @@
+// driven-adapter-in-memory-repository: adaptador de salida, implementacion en
+// memoria del ItemGateway. Reemplazar por un adaptador real (JPA/R2DBC) cuando
+// el proyecto lo requiera.
+apply plugin: 'io.spring.dependency-management'
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.boot:spring-boot-dependencies:3.3.4"
+    }
+}
+
+dependencies {
+    implementation project(':domain-model')
+    implementation project(':domain-usecase')
+    implementation 'org.springframework:spring-context'
+}

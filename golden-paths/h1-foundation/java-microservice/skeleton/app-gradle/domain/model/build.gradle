@@ -1,0 +1,2 @@
+// domain-model: dominio puro, sin dependencias de frameworks (Clean Architecture).
+// Hereda Java 21 + JUnit del build.gradle raiz.

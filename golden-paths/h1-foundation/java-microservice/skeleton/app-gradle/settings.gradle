@@ -1,0 +1,16 @@
+rootProject.name = '${{ values.name }}'
+
+include 'domain-model'
+project(':domain-model').projectDir = file('domain/model')
+
+include 'domain-usecase'
+project(':domain-usecase').projectDir = file('domain/usecase')
+
+include 'driven-adapter-in-memory-repository'
+project(':driven-adapter-in-memory-repository').projectDir = file('infrastructure/driven-adapters/in-memory-repository')
+
+include 'entrypoint-rest'
+project(':entrypoint-rest').projectDir = file('infrastructure/entry-points/rest')
+
+include 'applications-app-service'
+project(':applications-app-service').projectDir = file('applications/app-service')

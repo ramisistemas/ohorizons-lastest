@@ -1,0 +1,25 @@
+// applications-app-service: punto de arranque Spring Boot, conecta dominio,
+// casos de uso y adaptadores.
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.boot:spring-boot-dependencies:3.3.4"
+    }
+}
+
+dependencies {
+    implementation project(':domain-model')
+    implementation project(':domain-usecase')
+    implementation project(':driven-adapter-in-memory-repository')
+    implementation project(':entrypoint-rest')
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+bootJar {
+    archiveBaseName = 'applications-app-service'
+    archiveVersion = '0.1.0'
+}

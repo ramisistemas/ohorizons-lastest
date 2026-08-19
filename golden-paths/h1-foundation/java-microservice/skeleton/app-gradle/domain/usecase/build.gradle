@@ -1,0 +1,6 @@
+// domain-usecase: casos de uso, orquestan el dominio, sin depender de infraestructura.
+dependencies {
+    implementation project(':domain-model')
+
+    testImplementation 'org.mockito:mockito-core:5.12.0'
+}

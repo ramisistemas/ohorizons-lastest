@@ -1,0 +1,68 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{ values.name }}
+  description: ${{ values.description }}
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: SuraOhorizons/${{ values.name }}
+    argocd/app-name: ${{ values.name }}
+  tags:
+    - java
+    - spring-boot
+    - lba
+    - h1-foundation
+spec:
+  type: service
+  lifecycle: experimental
+  owner: ${{ values.owner }}
+  system: ${{ values.system }}
+  providesApis:
+    - ${{ values.name }}-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: ${{ values.name }}-api
+  description: API REST de ${{ values.name }}
+spec:
+  type: openapi
+  lifecycle: experimental
+  owner: ${{ values.owner }}
+  definition: |
+    openapi: 3.0.0
+    info:
+      title: ${{ values.name }} API
+      version: 1.0.0
+    paths:
+      /actuator/health/liveness:
+        get:
+          summary: Liveness probe
+          responses:
+            '200':
+              description: El proceso está vivo
+      /actuator/health/readiness:
+        get:
+          summary: Readiness probe
+          responses:
+            '200':
+              description: El servicio está listo para recibir tráfico
+            '503':
+              description: El servicio no está listo
+      /actuator/metrics:
+        get:
+          summary: Métricas del servicio
+          responses:
+            '200':
+              description: Métricas en formato Actuator/Micrometer
+      /api/items:
+        get:
+          summary: Lista todos los items (ejemplo de referencia)
+          responses:
+            '200':
+              description: Array de items
+        post:
+          summary: Crea un item (ejemplo de referencia)
+          responses:
+            '201':
+              description: Item creado

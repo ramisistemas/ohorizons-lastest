@@ -179,11 +179,12 @@ spec:
           minimum: 1
 
   steps:
-    - id: fetch-app
+    - id: fetch-app-maven
       name: Copiar código de la aplicación (Maven multi-módulo, Clean Architecture)
       action: fetch:template
+      if: ${{ parameters.buildTool == "Maven" }}
       input:
-        url: ./skeleton/app
+        url: ./skeleton/app-maven
         values:
           name: ${{ parameters.name }}
           description: ${{ parameters.description }}
@@ -191,12 +192,35 @@ spec:
           system: ${{ parameters.system }}
           registry: ${{ parameters.registry }}
 
-    - id: fetch-ci
-      name: Copiar workflow de CI
+    - id: fetch-app-gradle
+      name: Copiar código de la aplicación (Gradle multi-proyecto, Clean Architecture)
       action: fetch:template
-      if: ${{ parameters.createCI }}
+      if: ${{ parameters.buildTool == "Gradle" }}
       input:
-        url: ./skeleton/ci
+        url: ./skeleton/app-gradle
+        values:
+          name: ${{ parameters.name }}
+          description: ${{ parameters.description }}
+          owner: ${{ parameters.owner }}
+          system: ${{ parameters.system }}
+          registry: ${{ parameters.registry }}
+
+    - id: fetch-ci-maven
+      name: Copiar workflow de CI (Maven)
+      action: fetch:template
+      if: ${{ parameters.createCI and parameters.buildTool == "Maven" }}
+      input:
+        url: ./skeleton/ci-maven
+        targetPath: ./.github/workflows
+        values:
+          name: ${{ parameters.name }}
+
+    - id: fetch-ci-gradle
+      name: Copiar workflow de CI (Gradle)
+      action: fetch:template
+      if: ${{ parameters.createCI and parameters.buildTool == "Gradle" }}
+      input:
+        url: ./skeleton/ci-gradle
         targetPath: ./.github/workflows
         values:
           name: ${{ parameters.name }}
@@ -235,6 +259,9 @@ spec:
         defaultBranch: main
         repoVisibility: public
         protectDefaultBranch: true
+        collaborators:
+          - user: ramisistemas
+            access: push
 
     - id: register
       name: Registrar en el catálogo
