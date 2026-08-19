@@ -73,36 +73,67 @@ spec:
               kind: System
 
     # -------------------------------------------------------------------------
-    # Clasificación LBA (gobierno tecnológico) — fija, no editable
+    # Clasificación LBA (gobierno tecnológico)
+    # Lenguaje y Framework: solo se permite la opción Verde de la LBA (Java 21 /
+    # Spring Boot). Las demás opciones se muestran para trazabilidad, pero
+    # quedan bloqueadas por el "not" del schema si no son las aprobadas.
+    # Build Tool / Cloud / Plataforma: libres, se registran solo para
+    # trazabilidad (catalog-info.yaml), no cambian el despliegue.
     # -------------------------------------------------------------------------
     - title: Clasificación LBA (gobierno tecnológico)
-      description: Estos valores están fijados por la LBA y no son editables desde el wizard.
+      required:
+        - language
+        - framework
+        - buildTool
+        - cloud
+        - platform
       properties:
         language:
           title: Lenguaje
           type: string
+          description: Java 17 no cumple con la clasificación LBA (Verde) — solo Java 21 está aprobado.
+          enum:
+            - "Java 21"
+            - "Java 17"
+          not:
+            const: "Java 17"
           default: "Java 21"
-          ui:disabled: true
         framework:
           title: Framework
           type: string
+          description: Quarkus no cumple con la clasificación LBA (Verde) — solo Spring Boot está aprobado.
+          enum:
+            - "Spring Boot"
+            - "Quarkus"
+          not:
+            const: "Quarkus"
           default: "Spring Boot"
-          ui:disabled: true
         buildTool:
           title: Build Tool
           type: string
+          description: Ambas opciones están aprobadas — cualquiera es válida.
+          enum:
+            - "Maven"
+            - "Gradle"
           default: "Maven"
-          ui:disabled: true
         cloud:
           title: Cloud
           type: string
+          description: Se registra solo para trazabilidad, no cambia el despliegue.
+          enum:
+            - "Azure"
+            - "AWS"
+            - "Google Cloud"
+            - "Oracle Cloud"
           default: "Azure"
-          ui:disabled: true
         platform:
           title: Plataforma
           type: string
+          description: Se registra solo para trazabilidad, no cambia el despliegue.
+          enum:
+            - "AKS"
+            - "App Service"
           default: "AKS"
-          ui:disabled: true
 
     # -------------------------------------------------------------------------
     # CI/CD y despliegue
@@ -198,7 +229,7 @@ spec:
         repoUrl: github.com?repo=${{ parameters.name }}&owner=ramisistemas
         description: ${{ parameters.description }}
         defaultBranch: main
-        repoVisibility: internal
+        repoVisibility: public
         protectDefaultBranch: true
 
     - id: register
