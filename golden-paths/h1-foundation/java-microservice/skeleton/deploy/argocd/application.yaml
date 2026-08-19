@@ -6,7 +6,7 @@ metadata:
 spec:
   project: platform
   source:
-    repoURL: https://github.com/SuraOhorizons/${{values.name}}.git
+    repoURL: https://github.com/ramisistemas/${{values.name}}.git
     targetRevision: main
     path: deploy
   destination:
