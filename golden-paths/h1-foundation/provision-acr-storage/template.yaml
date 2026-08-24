@@ -1,0 +1,183 @@
+# =============================================================================
+# OPEN HORIZONS PLATFORM - H1 ACR + BLOB STORAGE GOLDEN PATH TEMPLATE
+# =============================================================================
+#
+# Backstage Software Template para aprovisionar, vía Terraform, un Azure
+# Container Registry y una Storage Account con un Blob Container, en un repo
+# propio con su propio CI/CD (plan en PR, apply en merge a main).
+#
+# Horizon: H1 - Foundation
+# Objetivo: self-service de infraestructura mínima (ACR + Blob Storage) para
+# que el desarrollador no dependa del equipo de plataforma para tareas
+# recurrentes de este tipo.
+#
+# =============================================================================
+
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: h1-provision-acr-storage
+  title: "H1: Provisionar ACR + Blob Storage (Terraform)"
+  description: |
+    Crea un repositorio con código Terraform standalone para desplegar un
+    Azure Container Registry y una Storage Account con Blob Container,
+    junto con su pipeline de CI/CD (plan en PR, apply en main).
+  tags:
+    - h1-foundation
+    - terraform
+    - azure
+    - acr
+    - storage
+    - infrastructure
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+
+spec:
+  owner: platform-engineering
+  type: infrastructure
+
+  parameters:
+    # -------------------------------------------------------------------------
+    # Datos del proyecto
+    # -------------------------------------------------------------------------
+    - title: Datos del proyecto
+      required:
+        - name
+        - owner
+        - environment
+      properties:
+        name:
+          title: Nombre del recurso
+          description: >-
+            Nombre base para el resource group, el ACR y la Storage Account.
+            Solo minúsculas y números, sin guiones (restricción de nombres de
+            Azure Container Registry y Storage Account).
+          type: string
+          pattern: '^[a-z][a-z0-9]{2,14}$'
+          ui:autofocus: true
+          ui:help: 'Ejemplo: ordersvc, paymentsapi (máx. 15 caracteres, sin guiones)'
+        description:
+          title: Descripción
+          type: string
+          maxLength: 300
+        owner:
+          title: Owner
+          description: Equipo dueño de esta infraestructura
+          type: string
+          ui:field: OwnerPicker
+          ui:options:
+            catalogFilter:
+              kind: Group
+        system:
+          title: System
+          description: Sistema al que pertenece esta infraestructura
+          type: string
+          ui:field: EntityPicker
+          ui:options:
+            catalogFilter:
+              kind: System
+
+        environment:
+          title: Ambiente
+          type: string
+          default: dev
+          enum:
+            - dev
+            - staging
+            - prod
+          enumNames:
+            - Development
+            - Staging
+            - Production
+
+        azureRegion:
+          title: Región de Azure
+          type: string
+          default: eastus2
+          enum:
+            - eastus2
+            - eastus
+            - westus2
+            - northeurope
+            - westeurope
+
+    # -------------------------------------------------------------------------
+    # Repositorio
+    # -------------------------------------------------------------------------
+    - title: Repositorio
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          title: Ubicación del repositorio
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+
+  # ===========================================================================
+  # STEPS
+  # ===========================================================================
+
+  steps:
+    - id: fetch-skeleton
+      name: Generar código del repositorio
+      action: fetch:template
+      input:
+        url: ./skeleton
+        targetPath: ./repo
+        values:
+          name: ${{ parameters.name }}
+          description: ${{ parameters.description }}
+          owner: ${{ parameters.owner }}
+          system: ${{ parameters.system }}
+          environment: ${{ parameters.environment }}
+          azureRegion: ${{ parameters.azureRegion }}
+          repoUrl: ${{ parameters.repoUrl }}
+          destination: ${{ parameters.repoUrl | parseRepoUrl }}
+
+    - id: publish
+      name: Publicar en GitHub
+      action: publish:github
+      input:
+        repoUrl: github.com?repo=${{ parameters.name }}&owner=ramisistemas
+        description: ${{ parameters.description }}
+        defaultBranch: main
+        repoVisibility: public
+        sourcePath: ./repo
+        protectDefaultBranch: true
+
+    - id: register
+      name: Registrar en el catálogo
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
+
+  output:
+    links:
+      - title: Repositorio
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Abrir en el catálogo
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}
+    text:
+      - title: Infraestructura ACR + Blob Storage creada
+        content: |
+          ## 📦 Repositorio de infraestructura creado
+
+          **Recurso:** ${{ parameters.name }}
+          **Ambiente:** ${{ parameters.environment }}
+          **Región:** ${{ parameters.azureRegion }}
+
+          Este repo trae:
+          - Terraform standalone para un Azure Container Registry (Basic, admin deshabilitado)
+          - Terraform standalone para una Storage Account (Standard/LRS) con un Blob Container privado
+          - Workflow de GitHub Actions: `terraform plan` en cada PR, `terraform apply` al hacer merge a `main`
+
+          **Siguientes pasos:**
+          1. Configurar el backend remoto de Terraform en `terraform/backend.tf` (copiar desde `backend.tf.example`)
+          2. Cargar los secrets de Azure en el repo: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`
+          3. Ajustar `terraform/terraform.tfvars` (copiar desde el `.example`) según el ambiente
+          4. Abrir un PR para ver el `plan`, y hacer merge a `main` para aplicar

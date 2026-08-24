@@ -1,0 +1,9 @@
+# Copiar este archivo a terraform.tfvars y ajustar según el ambiente.
+
+environment = "${{values.environment}}"
+location    = "${{values.azureRegion}}"
+
+tags = {
+  project = "${{values.name}}"
+  owner   = "${{values.owner}}"
+}

@@ -1,0 +1,11 @@
+# Copiar este archivo a backend.tf y completar con el storage account de
+# state ya existente en la plataforma (pedirlo al equipo de plataforma).
+#
+# terraform {
+#   backend "azurerm" {
+#     resource_group_name  = "rg-tfstate"
+#     storage_account_name = "sttfstateXXXX"
+#     container_name       = "tfstate"
+#     key                  = "${{values.name}}-${{values.environment}}.tfstate"
+#   }
+# }

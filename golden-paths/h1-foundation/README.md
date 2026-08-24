@@ -10,6 +10,7 @@ Foundation-level templates for basic infrastructure and application scaffolding.
 | `documentation-site` | Documentation website using MkDocs/Docusaurus | Simple |
 | `infrastructure-provisioning` | Terraform module scaffolding | Medium |
 | `new-microservice` | Basic microservice starter | Simple |
+| `provision-acr-storage` | Terraform standalone para ACR + Blob Storage, con CI/CD | Simple |
 | `security-baseline` | Security configuration baseline | Medium |
 | `tasks-api` | CRUD REST de tareas sobre PostgreSQL (reemplazo de PostgREST) | Simple |
 | `web-application` | Full-stack web application | Medium |
@@ -39,6 +40,13 @@ Creates a Terraform module structure with:
 - Testing scaffolding
 - Documentation
 - CI/CD for Terraform
+
+### provision-acr-storage
+
+Creates standalone Terraform to provision:
+- Azure Container Registry (Basic SKU, admin user disabled)
+- Storage Account (Standard/LRS) with a private Blob Container
+- CI/CD: `terraform plan` on PR, `terraform apply` on merge to `main`
 
 ### new-microservice
 
