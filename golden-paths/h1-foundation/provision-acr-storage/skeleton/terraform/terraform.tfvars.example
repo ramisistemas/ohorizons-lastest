@@ -1,7 +1,7 @@
 # Copiar este archivo a terraform.tfvars y ajustar según el ambiente.
 
-environment = "${{values.environment}}"
-location    = "${{values.azureRegion}}"
+environment         = "${{values.environment}}"
+resource_group_name = "${{values.resourceGroupName}}"
 
 tags = {
   project = "${{values.name}}"

@@ -3,10 +3,9 @@ variable "environment" {
   type        = string
 }
 
-variable "location" {
-  description = "Región de Azure donde se crean los recursos"
+variable "resource_group_name" {
+  description = "Resource Group existente donde se despliegan el ACR y el Storage Account"
   type        = string
-  default     = "${{values.azureRegion}}"
 }
 
 variable "tags" {

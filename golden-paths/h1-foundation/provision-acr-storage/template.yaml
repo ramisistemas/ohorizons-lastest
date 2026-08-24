@@ -90,16 +90,17 @@ spec:
             - Staging
             - Production
 
-        azureRegion:
-          title: Región de Azure
+        resourceGroupName:
+          title: Resource Group existente
+          description: >-
+            Resource Group donde ya se creó/desplegó y donde el Service
+            Principal de CI/CD tiene permisos (Contributor). El ACR y el
+            Storage Account se crean DENTRO de este Resource Group — no se
+            crea uno nuevo, porque el SP de la organización no tiene permiso
+            para crear Resource Groups (solo para gestionar recursos dentro
+            de uno ya existente).
           type: string
-          default: eastus2
-          enum:
-            - eastus2
-            - eastus
-            - westus2
-            - northeurope
-            - westeurope
+          default: RG-PRY-SURA-PLF-ENGINEERING
 
     # -------------------------------------------------------------------------
     # Repositorio
@@ -133,7 +134,7 @@ spec:
           owner: ${{ parameters.owner }}
           system: ${{ parameters.system }}
           environment: ${{ parameters.environment }}
-          azureRegion: ${{ parameters.azureRegion }}
+          resourceGroupName: ${{ parameters.resourceGroupName }}
           repoUrl: ${{ parameters.repoUrl }}
           destination: ${{ parameters.repoUrl | parseRepoUrl }}
 
@@ -169,15 +170,16 @@ spec:
 
           **Recurso:** ${{ parameters.name }}
           **Ambiente:** ${{ parameters.environment }}
-          **Región:** ${{ parameters.azureRegion }}
+          **Resource Group:** ${{ parameters.resourceGroupName }}
 
           Este repo trae:
           - Terraform standalone para un Azure Container Registry (Basic, admin deshabilitado)
           - Terraform standalone para una Storage Account (Standard/LRS) con un Blob Container privado
+          - Ambos se crean DENTRO del Resource Group existente indicado arriba (no se crea uno nuevo)
           - Workflow de GitHub Actions: `terraform plan` en cada PR, `terraform apply` al hacer merge a `main`
 
           **Siguientes pasos:**
-          1. Configurar el backend remoto de Terraform en `terraform/backend.tf` (copiar desde `backend.tf.example`)
-          2. Cargar los secrets de Azure en el repo: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`
+          1. Confirmar que los secrets `AZURE_CLIENT_ID` y `AZURE_CLIENT_SECRET` le llegan al repo (normalmente ya están a nivel de organización)
+          2. (Opcional) Configurar backend remoto de Terraform en `terraform/backend.tf` — si no lo haces, el state queda local al runner de cada ejecución
           3. Ajustar `terraform/terraform.tfvars` (copiar desde el `.example`) según el ambiente
           4. Abrir un PR para ver el `plan`, y hacer merge a `main` para aplicar

@@ -18,14 +18,13 @@ provider "azurerm" {
 }
 
 # -----------------------------------------------------------------------------
-# Resource Group
+# Resource Group (existente — el Service Principal de CI/CD no tiene permiso
+# para crear Resource Groups nuevos, solo para gestionar recursos dentro de
+# uno ya existente)
 # -----------------------------------------------------------------------------
 
-resource "azurerm_resource_group" "main" {
-  name     = "rg-${{values.name}}-${var.environment}"
-  location = var.location
-
-  tags = var.tags
+data "azurerm_resource_group" "main" {
+  name = var.resource_group_name
 }
 
 # -----------------------------------------------------------------------------
@@ -34,8 +33,8 @@ resource "azurerm_resource_group" "main" {
 
 resource "azurerm_container_registry" "main" {
   name                = "acr${{values.name}}${var.environment}"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
+  resource_group_name = data.azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.main.location
   sku                 = "Basic"
   admin_enabled       = false
 
@@ -48,8 +47,8 @@ resource "azurerm_container_registry" "main" {
 
 resource "azurerm_storage_account" "main" {
   name                     = "st${{values.name}}${var.environment}"
-  resource_group_name      = azurerm_resource_group.main.name
-  location                 = azurerm_resource_group.main.location
+  resource_group_name      = data.azurerm_resource_group.main.name
+  location                 = data.azurerm_resource_group.main.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
   min_tls_version          = "TLS1_2"
