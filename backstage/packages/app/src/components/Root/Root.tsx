@@ -21,6 +21,7 @@ import SettingsIcon from '@material-ui/icons/Settings';
 import TopBar from './TopBar';
 
 import { Sidebar, SidebarGroup, SidebarItem, SidebarPage, SidebarScrollWrapper, SidebarSpace } from '@backstage/core-components';
+import { useApi, configApiRef } from '@backstage/core-plugin-api';
 import MenuIcon from '@material-ui/icons/Menu';
 
 const useStyles = makeStyles({
@@ -181,6 +182,8 @@ const useStyles = makeStyles({
 
 export const Root = ({ children }: PropsWithChildren<{}>) => {
   const classes = useStyles();
+  const configApi = useApi(configApiRef);
+  const aiChatEnabled = configApi.getOptionalString('app.features.aiChat') === 'true';
 
   return (
     <div className={classes.page}>
@@ -209,12 +212,16 @@ export const Root = ({ children }: PropsWithChildren<{}>) => {
             <SidebarItem icon={ScoreIcon} to="tech-insights" text="Tech Insights" />
           </SidebarGroup>
 
-          <Typography className={classes.sectionLabel}>Intelligence</Typography>
-          <SidebarGroup label="Intelligence" icon={<ChatIcon />}>
-            <SidebarItem icon={ChatIcon} to="ai-chat" text="AI Chat" />
-            <SidebarItem icon={AssessmentIcon} to="ai-impact" text="AI Impact" />
-            <SidebarScrollWrapper />
-          </SidebarGroup>
+          {aiChatEnabled && (
+            <>
+              <Typography className={classes.sectionLabel}>Intelligence</Typography>
+              <SidebarGroup label="Intelligence" icon={<ChatIcon />}>
+                <SidebarItem icon={ChatIcon} to="ai-chat" text="AI Chat" />
+                <SidebarItem icon={AssessmentIcon} to="ai-impact" text="AI Impact" />
+                <SidebarScrollWrapper />
+              </SidebarGroup>
+            </>
+          )}
 
           <SidebarSpace />
 

@@ -1,6 +1,8 @@
 app:
   title: Open Horizons — Agentic DevOps Platform
   baseUrl: http://localhost:3000
+  features:
+    aiChat: ${AI_CHAT_ENABLED:-false}
 
 organization:
   name: Open Horizons
