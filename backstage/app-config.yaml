@@ -314,6 +314,10 @@ catalog:
     # H3 Innovation Golden Path Templates (21)
     # -----------------------------------------------------------------
     - type: file
+      target: ../../../golden-paths/h3-innovation/agent-blueprint/template.yaml
+      rules:
+        - allow: [Template]
+    - type: file
       target: ../../../golden-paths/h3-innovation/rag-application/template.yaml
       rules:
         - allow: [Template]

@@ -19,6 +19,8 @@ backend.add(import('@backstage/plugin-scaffolder-backend-module-github'));
 backend.add(
   import('@backstage/plugin-scaffolder-backend-module-notifications'),
 );
+// agent-blueprint:create — invoca agent-blueprint-cli (agent-blueprint-cli-archetype)
+backend.add(import('./plugins/scaffolder/agentBlueprintModule'));
 
 // techdocs plugin
 backend.add(import('@backstage/plugin-techdocs-backend'));

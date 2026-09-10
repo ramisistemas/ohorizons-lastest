@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${{values.name}}-config
+  namespace: ${{values.namespace}}
+data:
+  AGENT_NAME: "${{values.name}}"
+  AGENT_PORT: "8080"
+  AGENT_ENVIRONMENT: "${{values.environment}}"
+  AGENT_PUBLIC_AGENT_URL: "https://${{values.name}}.${{values.namespace}}.svc.cluster.local"
+  AGENT_LLM_GATEWAY_URL: "${{values.llmGatewayUrl}}"
+  AGENT_PROMPT_MANAGEMENT_URL: "${{values.promptManagementUrl}}"
+  AGENT_MCP_GATEWAY_URL: "${{values.mcpGatewayUrl}}"

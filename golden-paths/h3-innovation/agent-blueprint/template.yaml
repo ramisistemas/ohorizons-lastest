@@ -1,0 +1,237 @@
+# =============================================================================
+# OPEN HORIZONS PLATFORM - H3 AGENT BLUEPRINT GOLDEN PATH TEMPLATE
+# =============================================================================
+#
+# Backstage Software Template que genera un proyecto de agente IA (LangGraph +
+# arquitectura hexagonal), invocando el CLI agent-blueprint-cli-archetype en
+# vez de reimplementar sus templates Jinja2 como Nunjucks. El CLI ya trae
+# reglas de composicion validadas (rules.py): perfil -> componentes
+# obligatorios, MCP tools exige Policy Engine, A2A exige el feature flag, etc.
+#
+# Requiere que el backend de Backstage tenga instalado el paquete Python
+# `agent-blueprint-cli` (accion custom "agent-blueprint:create", registrada en
+# packages/backend/src/plugins/scaffolder/agentBlueprintModule.ts).
+#
+# =============================================================================
+
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: h3-agent-blueprint
+  title: "H3: Agent Blueprint (agente IA LangGraph + hexagonal)"
+  description: >
+    Genera un proyecto de agente IA (LangGraph, arquitectura hexagonal) segun
+    perfil y capacidades, usando agent-blueprint-cli. Publica el repo en
+    GitHub, incluye CI/CD (build + push a ACR) y manifiestos de despliegue
+    para ArgoCD/AKS, y registra el componente en el catálogo.
+  tags:
+    - h3-innovation
+    - agent
+    - langgraph
+    - python
+    - ai
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+
+spec:
+  owner: group:default/platform-engineering
+  type: service
+
+  parameters:
+    - title: Datos del proyecto
+      required:
+        - name
+        - domain
+        - owner
+      properties:
+        name:
+          title: Nombre del agente
+          type: string
+          description: Se usa como nombre del repo y del paquete Python (normalizado)
+          pattern: '^[a-z][a-z0-9-]{2,40}$'
+          ui:autofocus: true
+        domain:
+          title: Dominio de negocio
+          type: string
+          description: 'Ejemplo: seguros, salud, pagos'
+          default: default-domain
+        owner:
+          title: Owner
+          type: string
+          description: Equipo dueño del agente
+          ui:field: OwnerPicker
+          ui:options:
+            catalogFilter:
+              kind: Group
+        system:
+          title: System
+          type: string
+          description: Sistema al que pertenece este agente
+          ui:field: EntityPicker
+          ui:options:
+            catalogFilter:
+              kind: System
+
+    - title: Perfil y capacidades
+      required:
+        - profile
+      properties:
+        profile:
+          title: Perfil de arquitectura
+          type: string
+          default: single-agent-conversational
+          enum:
+            - single-agent-conversational
+            - transactional-tools
+            - orchestrator-worker
+            - planner-executor-reviewer
+            - async-event-driven
+          enumNames:
+            - "Single agent conversacional (HTTP)"
+            - "Single agent transaccional (MCP tools gobernadas)"
+            - "Multi-agente orchestrator-worker"
+            - "Multi-agente planner-executor-reviewer (con revisión de calidad)"
+            - "Event-driven asíncrono"
+        tools:
+          title: Tools mode (opcional — si se omite, usa el default del perfil)
+          type: string
+          enum:
+            - none
+            - mcp
+        inbound:
+          title: Inbound channel (opcional — si se omite, usa el default del perfil)
+          type: string
+          enum:
+            - http
+            - event
+        memory:
+          title: Memory mode (opcional — si se omite, usa el default del perfil)
+          type: string
+          enum:
+            - session
+            - episodic
+        a2a:
+          title: Habilitar A2A / AgentCard
+          type: boolean
+          default: false
+        internalMcpServer:
+          title: Generar servidor MCP interno
+          type: boolean
+          default: false
+
+    - title: CI/CD y despliegue
+      required:
+        - registry
+        - namespace
+      properties:
+        registry:
+          title: Container Registry
+          type: string
+          default: crsuradev.azurecr.io
+        namespace:
+          title: Kubernetes Namespace
+          type: string
+          default: ai-agents
+        environment:
+          title: Ambiente
+          type: string
+          default: dev
+          enum:
+            - dev
+            - staging
+            - prod
+        llmGatewayUrl:
+          title: LLM Gateway URL
+          type: string
+          description: URL interna del LLM Gateway de la plataforma
+        promptManagementUrl:
+          title: Prompt Management URL
+          type: string
+          description: URL interna del servicio de Prompt Management de la plataforma
+        mcpGatewayUrl:
+          title: MCP Gateway URL
+          type: string
+          description: URL interna del MCP Gateway (solo aplica si Tools mode = mcp)
+        llmApiKeySecretKey:
+          title: Secreto en Key Vault — LLM API Key
+          type: string
+          default: LlmGatewayApiKey
+
+  # ===========================================================================
+  # STEPS
+  # ===========================================================================
+
+  steps:
+    - id: generate-agent
+      name: Generar proyecto del agente (agent-blueprint-cli)
+      action: agent-blueprint:create
+      input:
+        name: ${{ parameters.name }}
+        domain: ${{ parameters.domain }}
+        owner: ${{ parameters.owner }}
+        profile: ${{ parameters.profile }}
+        tools: ${{ parameters.tools }}
+        inbound: ${{ parameters.inbound }}
+        memory: ${{ parameters.memory }}
+        a2a: ${{ parameters.a2a }}
+        internalMcpServer: ${{ parameters.internalMcpServer }}
+
+    - id: fetch-extras
+      name: Agregar catálogo, CI/CD y manifiestos de despliegue
+      action: fetch:template
+      input:
+        url: ./skeleton/extras
+        values:
+          name: ${{ parameters.name }}
+          domain: ${{ parameters.domain }}
+          owner: ${{ parameters.owner }}
+          system: ${{ parameters.system }}
+          profile: ${{ parameters.profile }}
+          registry: ${{ parameters.registry }}
+          namespace: ${{ parameters.namespace }}
+          environment: ${{ parameters.environment }}
+          llmGatewayUrl: ${{ parameters.llmGatewayUrl }}
+          promptManagementUrl: ${{ parameters.promptManagementUrl }}
+          mcpGatewayUrl: ${{ parameters.mcpGatewayUrl }}
+          llmApiKeySecretKey: ${{ parameters.llmApiKeySecretKey }}
+
+    - id: publish
+      name: Publicar en GitHub
+      action: publish:github
+      input:
+        repoUrl: github.com?repo=${{ parameters.name }}&owner=SuraOhorizons
+        description: Agente IA (${{ parameters.profile }}) generado con agent-blueprint-cli
+        repoVisibility: public
+        defaultBranch: main
+        collaborators:
+          - user: ramisistemas
+            access: push
+
+    - id: register
+      name: Registrar en el catálogo
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
+
+  output:
+    links:
+      - title: Repositorio en GitHub
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Abrir en el catálogo
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}
+    text:
+      - title: Agente IA generado
+        content: |
+          ## 🤖 Agente `${{ parameters.name }}` generado
+
+          **Perfil:** ${{ parameters.profile }}
+          **Dominio:** ${{ parameters.domain }}
+
+          **Siguientes pasos:**
+          1. Cargar en Key Vault el secreto `${{ parameters.llmApiKeySecretKey }}`
+          2. Confirmar `AGENT_LLM_GATEWAY_URL`/`AGENT_PROMPT_MANAGEMENT_URL`/`AGENT_MCP_GATEWAY_URL` en `deploy/configmap.yaml`
+          3. Confirmar que los secrets `AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET` de la organización llegan a este repo
+          4. Hacer merge a `main` para disparar el build + push a ACR
+          5. Sincronizar la `Application` de ArgoCD (`deploy/argocd/application.yaml`)
