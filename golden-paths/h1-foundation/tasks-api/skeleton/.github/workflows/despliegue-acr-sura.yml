@@ -1,0 +1,199 @@
+name: Build and Push to ACR
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+env:
+  ACR_NAME: crsuradev
+  REGISTRY: ${{values.registry}}
+  IMAGE_NAME: ${{values.name}}
+  IMAGE_TAG: sura.v1
+  AZURE_TENANT_ID: 9dbc76ea-fb25-4b07-8f07-5dc315999b76
+  AZURE_SUBSCRIPTION_ID: f0550323-fb0b-44d4-8a39-ecf0f6c2dbc9
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        run: |
+          az login --service-principal \
+            --username "{% raw %}${{ secrets.AZURE_CLIENT_ID }}{% endraw %}" \
+            --password "{% raw %}${{ secrets.AZURE_CLIENT_SECRET }}{% endraw %}" \
+            --tenant "$AZURE_TENANT_ID"
+
+      - name: List Available Subscriptions
+        run: |
+          echo "===== AVAILABLE SUBSCRIPTIONS ====="
+          az account list -o table
+
+      - name: Select Subscription
+        run: |
+          echo "===== SELECTING SUBSCRIPTION ====="
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+
+      - name: Validate Current Subscription
+        run: |
+          echo "===== CURRENT SUBSCRIPTION ====="
+          az account show -o table
+
+      - name: List ACRs in Selected Subscription
+        run: |
+          echo "===== ACRs IN CURRENT SUBSCRIPTION ====="
+          az acr list -o table
+
+      - name: Validate Azure Container Registry
+        run: |
+          echo "===== VALIDATING ACR ====="
+          az acr show --name "$ACR_NAME" -o table
+
+      - name: Login to Azure Container Registry
+        run: |
+          echo "===== LOGIN TO ACR ====="
+          az acr login --name "$ACR_NAME"
+
+      - name: List Repositories
+        run: |
+          echo "===== ACR REPOSITORIES ====="
+          az acr repository list --name "$ACR_NAME" -o table
+
+      - name: Validate Previous Image
+        run: |
+          echo "===== PREVIOUS IMAGE VALIDATION ====="
+          echo "Repository: $IMAGE_NAME"
+          echo "Tag to validate: $IMAGE_TAG"
+          echo "Full image: $REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
+
+          PREVIOUS_DIGEST=$(az acr manifest list-metadata \
+            --registry "$ACR_NAME" \
+            --name "$IMAGE_NAME" \
+            --query "[?tags && contains(tags, '$IMAGE_TAG')].digest | [0]" \
+            -o tsv 2>/dev/null || true)
+
+          PREVIOUS_UPDATED_TIME=$(az acr manifest list-metadata \
+            --registry "$ACR_NAME" \
+            --name "$IMAGE_NAME" \
+            --query "[?tags && contains(tags, '$IMAGE_TAG')].lastUpdateTime | [0]" \
+            -o tsv 2>/dev/null || true)
+
+          if [ -n "$PREVIOUS_DIGEST" ]; then
+            echo "Previous image found."
+            echo "Previous image: $REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
+            echo "Previous digest: $PREVIOUS_DIGEST"
+            echo "Previous updated time: ${PREVIOUS_UPDATED_TIME:-N/A}"
+
+            echo "PREVIOUS_IMAGE_STATUS=FOUND" >> "$GITHUB_ENV"
+            echo "PREVIOUS_IMAGE=$REGISTRY/$IMAGE_NAME:$IMAGE_TAG" >> "$GITHUB_ENV"
+            echo "PREVIOUS_DIGEST=$PREVIOUS_DIGEST" >> "$GITHUB_ENV"
+            echo "PREVIOUS_UPDATED_TIME=${PREVIOUS_UPDATED_TIME:-N/A}" >> "$GITHUB_ENV"
+          else
+            echo "No previous image found with tag $IMAGE_TAG."
+
+            echo "PREVIOUS_IMAGE_STATUS=NOT_FOUND" >> "$GITHUB_ENV"
+            echo "PREVIOUS_IMAGE=$REGISTRY/$IMAGE_NAME:$IMAGE_TAG" >> "$GITHUB_ENV"
+            echo "PREVIOUS_DIGEST=N/A" >> "$GITHUB_ENV"
+            echo "PREVIOUS_UPDATED_TIME=N/A" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build Docker Image
+        run: |
+          echo "===== BUILDING IMAGE ====="
+          echo "Image: $REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
+          echo "Push creator: $GITHUB_ACTOR"
+          echo "Triggering actor: $GITHUB_TRIGGERING_ACTOR"
+          echo "Branch: $GITHUB_REF_NAME"
+          echo "Commit SHA: $GITHUB_SHA"
+
+          docker build \
+            --label org.opencontainers.image.authors="$GITHUB_ACTOR" \
+            --label org.opencontainers.image.revision="$GITHUB_SHA" \
+            --label org.opencontainers.image.source="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            --label org.opencontainers.image.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+            --label com.github.actor="$GITHUB_ACTOR" \
+            --label com.github.triggering_actor="$GITHUB_TRIGGERING_ACTOR" \
+            --label com.github.ref="$GITHUB_REF_NAME" \
+            -t "$REGISTRY/$IMAGE_NAME:$IMAGE_TAG" .
+
+      - name: Push Docker Image
+        run: |
+          echo "===== PUSHING IMAGE ====="
+          echo "Pushing image: $REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
+          echo "Push creator: $GITHUB_ACTOR"
+
+          docker push "$REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
+
+      - name: Validate New Image
+        run: |
+          echo "===== NEW IMAGE VALIDATION ====="
+
+          NEW_DIGEST=$(az acr manifest list-metadata \
+            --registry "$ACR_NAME" \
+            --name "$IMAGE_NAME" \
+            --query "[?tags && contains(tags, '$IMAGE_TAG')].digest | [0]" \
+            -o tsv)
+
+          NEW_UPDATED_TIME=$(az acr manifest list-metadata \
+            --registry "$ACR_NAME" \
+            --name "$IMAGE_NAME" \
+            --query "[?tags && contains(tags, '$IMAGE_TAG')].lastUpdateTime | [0]" \
+            -o tsv)
+
+          echo "New image: $REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
+          echo "New digest: $NEW_DIGEST"
+          echo "New updated time: $NEW_UPDATED_TIME"
+
+          echo "NEW_IMAGE=$REGISTRY/$IMAGE_NAME:$IMAGE_TAG" >> "$GITHUB_ENV"
+          echo "NEW_DIGEST=$NEW_DIGEST" >> "$GITHUB_ENV"
+          echo "NEW_UPDATED_TIME=$NEW_UPDATED_TIME" >> "$GITHUB_ENV"
+
+      - name: Summary
+        run: |
+          echo "========================================="
+          echo "Docker Image Publish Summary"
+          echo "========================================="
+          echo "Previous image status: $PREVIOUS_IMAGE_STATUS"
+          echo "Previous image: $PREVIOUS_IMAGE"
+          echo "Previous digest: $PREVIOUS_DIGEST"
+          echo "Previous updated time: $PREVIOUS_UPDATED_TIME"
+          echo "========================================="
+          echo "New published image: $NEW_IMAGE"
+          echo "New digest: $NEW_DIGEST"
+          echo "New updated time: $NEW_UPDATED_TIME"
+          echo "Image tag: $IMAGE_TAG"
+          echo "Push creator: $GITHUB_ACTOR"
+          echo "Triggering actor: $GITHUB_TRIGGERING_ACTOR"
+          echo "Commit SHA: $GITHUB_SHA"
+          echo "Branch: $GITHUB_REF_NAME"
+          echo "========================================="
+
+          {
+            echo "## Docker Image Publish Summary"
+            echo ""
+            echo "### Previous image"
+            echo ""
+            echo "- Status: \`$PREVIOUS_IMAGE_STATUS\`"
+            echo "- Image: \`$PREVIOUS_IMAGE\`"
+            echo "- Previous digest: \`$PREVIOUS_DIGEST\`"
+            echo "- Previous updated time: \`$PREVIOUS_UPDATED_TIME\`"
+            echo ""
+            echo "### New published image"
+            echo ""
+            echo "- Image: \`$NEW_IMAGE\`"
+            echo "- Tag: \`$IMAGE_TAG\`"
+            echo "- New digest: \`$NEW_DIGEST\`"
+            echo "- New updated time: \`$NEW_UPDATED_TIME\`"
+            echo "- Push creator: \`$GITHUB_ACTOR\`"
+            echo "- Triggering actor: \`$GITHUB_TRIGGERING_ACTOR\`"
+            echo "- Commit SHA: \`$GITHUB_SHA\`"
+            echo "- Branch: \`$GITHUB_REF_NAME\`"
+          } >> "$GITHUB_STEP_SUMMARY"

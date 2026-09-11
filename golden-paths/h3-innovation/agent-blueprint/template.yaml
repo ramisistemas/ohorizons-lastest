@@ -199,7 +199,7 @@ spec:
       name: Publicar en GitHub
       action: publish:github
       input:
-        repoUrl: github.com?repo=${{ parameters.name }}&owner=SuraOhorizons
+        repoUrl: github.com?repo=${{ parameters.name }}&owner=ramisistemas
         description: Agente IA (${{ parameters.profile }}) generado con agent-blueprint-cli
         repoVisibility: public
         defaultBranch: main

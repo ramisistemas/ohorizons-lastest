@@ -5,8 +5,9 @@ metadata:
   title: "Tasks API (Node.js + PostgreSQL)"
   description: >
     Genera un microservicio Node.js/Express con CRUD REST de tareas sobre
-    PostgreSQL, y lo publica como repo nuevo en github.com/. No registra
-    el componente en el catálogo.
+    PostgreSQL, publica el repo en github.com/, incluye el workflow de CI/CD
+    (build + push a ACR) y los manifiestos de despliegue para ArgoCD/AKS, y
+    registra el componente en el catálogo de Backstage.
   tags:
     - h1-foundation
     - nodejs
@@ -31,18 +32,73 @@ spec:
         owner:
           title: Owner
           type: string
-          description: Equipo o persona dueña del componente (se guarda en catalog-info.yaml, no se registra automáticamente)
+          description: Equipo o persona dueña del componente (se guarda en catalog-info.yaml)
           default: group:default/platform-engineering
 
+    - title: CI/CD y despliegue
+      required:
+        - registry
+        - namespace
+      properties:
+        registry:
+          title: Container Registry
+          type: string
+          description: Registro donde CI publica la imagen (ej. crsuradev.azurecr.io)
+          default: crsuradev.azurecr.io
+        namespace:
+          title: Kubernetes Namespace
+          type: string
+          description: Namespace de AKS donde ArgoCD despliega el servicio
+          default: demo-ohorizons
+        system:
+          title: System
+          type: string
+          description: Sistema al que pertenece este servicio (etiqueta app.kubernetes.io/part-of)
+          default: openhorizons-demo
+        databaseSecretKey:
+          title: Database Secret Key (Key Vault)
+          type: string
+          description: Nombre del secreto en Key Vault con la connection string de Postgres
+          default: tasksdb-connection-string
+        allowedOrigin:
+          title: CORS Allowed Origin
+          type: string
+          description: Origen permitido para llamadas desde el frontend
+          default: "*"
+
   steps:
-    - id: fetch
-      name: Copiar plantilla
+    - id: fetch-app
+      name: Copiar código de la aplicación
       action: fetch:template
       input:
         url: ./skeleton/app
         values:
           name: ${{ parameters.name }}
           owner: ${{ parameters.owner }}
+
+    - id: fetch-ci
+      name: Copiar workflow de CI/CD
+      action: fetch:template
+      input:
+        url: ./skeleton/.github
+        targetPath: ./.github
+        values:
+          name: ${{ parameters.name }}
+          registry: ${{ parameters.registry }}
+
+    - id: fetch-deploy
+      name: Copiar manifiestos de despliegue
+      action: fetch:template
+      input:
+        url: ./skeleton/deploy
+        targetPath: ./deploy
+        values:
+          name: ${{ parameters.name }}
+          namespace: ${{ parameters.namespace }}
+          system: ${{ parameters.system }}
+          registry: ${{ parameters.registry }}
+          databaseSecretKey: ${{ parameters.databaseSecretKey }}
+          allowedOrigin: ${{ parameters.allowedOrigin }}
 
     - id: publish
       name: Publicar en GitHub
@@ -52,8 +108,21 @@ spec:
         description: Generado desde la plantilla tasks-api
         repoVisibility: public
         defaultBranch: main
+        collaborators:
+          - user: ramisistemas
+            access: push
+
+    - id: register
+      name: Registrar en el catálogo
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
 
   output:
     links:
       - title: Repositorio en GitHub
         url: ${{ steps.publish.output.remoteUrl }}
+      - title: Abrir en el catálogo
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}
