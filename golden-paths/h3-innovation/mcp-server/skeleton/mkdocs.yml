@@ -1,0 +1,7 @@
+site_name: ${{ values.name }}
+nav:
+  - Inicio: index.md
+  - Arquitectura: architecture.md
+  - Diagramas: ARCHITECTURE_DIAGRAMS.md
+plugins:
+  - techdocs-core

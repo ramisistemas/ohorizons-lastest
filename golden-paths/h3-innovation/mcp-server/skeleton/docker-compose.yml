@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${{ values.name }}
+    environment:
+      SERVER_NAME: ${{ values.name }}
+      SERVER_VERSION: 1.0.0
+      DEBUG: "false"
+      LOG_LEVEL: INFO
+      INSURANCE_API_BASE_URL: ${INSURANCE_API_BASE_URL:-https://api.insurance-backend.example.com}
+      INSURANCE_API_KEY: ${INSURANCE_API_KEY:-}
+      INSURANCE_API_TIMEOUT: 30
+      ENABLE_CACHING: "true"
+      CACHE_TTL: 3600
+    stdin_open: true
+    tty: true
+    volumes:
+      # Para desarrollo - monta el código local
+      - ./src:/app/src:ro
+      - ./.env:/app/.env:ro
+    ports:
+      # MCP usa stdio, pero podemos exponer puertos si los agregamos
+      - "8000:8000"  # Para futuro API REST (opcional)
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - mcp-network
+
+  # Ejemplo: Base de datos (comentado por defecto)
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: mcp-postgres
+  #   environment:
+  #     POSTGRES_USER: mcp_user
+  #     POSTGRES_PASSWORD: mcp_password
+  #     POSTGRES_DB: mcp_db
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - mcp-network
+
+volumes:
+  # postgres_data:
+
+networks:
+  mcp-network:
+    driver: bridge

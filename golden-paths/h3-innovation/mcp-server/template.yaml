@@ -1,0 +1,179 @@
+# =============================================================================
+# OPEN HORIZONS PLATFORM - H3 MCP SERVER GOLDEN PATH TEMPLATE
+# =============================================================================
+#
+# Backstage Software Template que genera un servidor MCP (Model Context
+# Protocol) real, basado en pymcpserver (Clean Architecture / DDD: domain ->
+# application -> infrastructure -> delivery), usando el SDK oficial `mcp`.
+#
+# A diferencia de h3-agent-blueprint (que genera un AGENTE que CONSUME tools
+# vía un MCP Gateway externo por HTTP), este golden path genera el SERVIDOR
+# MCP en si mismo: expone Tools/Resources reales por protocolo MCP (stdio
+# para clientes locales, HTTP/SSE para despliegue en Kubernetes).
+#
+# El repo generado incluye un caso de uso de referencia (polizas de seguro)
+# para mostrar el patron completo end-to-end; se espera que el equipo dueno
+# lo reemplace por las tools reales de su dominio.
+#
+# =============================================================================
+
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: h3-mcp-server
+  title: "H3: MCP Server (servidor MCP real, Clean Architecture)"
+  description: >
+    Genera un servidor MCP (Model Context Protocol) completo, con Tools y
+    Resources reales sobre el SDK oficial `mcp`, transporte stdio/HTTP-SSE,
+    CI/CD (build + push a ACR) y manifiestos de despliegue para ArgoCD/AKS.
+  tags:
+    - h3-innovation
+    - mcp
+    - python
+    - ai
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+
+spec:
+  owner: group:default/platform-engineering
+  type: service
+
+  parameters:
+    - title: Datos del proyecto
+      required:
+        - name
+        - domain
+        - owner
+      properties:
+        name:
+          title: Nombre del servidor MCP
+          type: string
+          description: Se usa como nombre del repo y del paquete Python
+          pattern: '^[a-z][a-z0-9-]{2,40}$'
+          ui:autofocus: true
+        description:
+          title: Descripcion
+          type: string
+          default: Servidor MCP con Clean Architecture y DDD
+        domain:
+          title: Dominio de negocio
+          type: string
+          description: 'Ejemplo: seguros, salud, pagos'
+          default: default-domain
+        owner:
+          title: Owner
+          type: string
+          description: Equipo dueño del servidor MCP
+          ui:field: OwnerPicker
+          ui:options:
+            catalogFilter:
+              kind: Group
+        system:
+          title: System
+          type: string
+          description: Sistema al que pertenece este servidor MCP
+          ui:field: EntityPicker
+          ui:options:
+            catalogFilter:
+              kind: System
+
+    - title: Backend externo
+      required:
+        - backendApiUrl
+      properties:
+        backendApiUrl:
+          title: URL base del backend/API a exponer como tools MCP
+          type: string
+          default: https://api.example.com
+        backendApiKeySecretKey:
+          title: Secreto en Key Vault — API Key del backend
+          type: string
+          default: McpBackendApiKey
+
+    - title: CI/CD y despliegue
+      required:
+        - registry
+        - namespace
+      properties:
+        registry:
+          title: Container Registry
+          type: string
+          default: crsuradev.azurecr.io
+        namespace:
+          title: Kubernetes Namespace
+          type: string
+          default: mcp-servers
+        environment:
+          title: Ambiente
+          type: string
+          default: dev
+          enum:
+            - dev
+            - staging
+            - prod
+
+  # ===========================================================================
+  # STEPS
+  # ===========================================================================
+
+  steps:
+    - id: fetch-skeleton
+      name: Generar proyecto del servidor MCP
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          description: ${{ parameters.description }}
+          domain: ${{ parameters.domain }}
+          owner: ${{ parameters.owner }}
+          system: ${{ parameters.system }}
+          backendApiUrl: ${{ parameters.backendApiUrl }}
+          backendApiKeySecretKey: ${{ parameters.backendApiKeySecretKey }}
+          registry: ${{ parameters.registry }}
+          namespace: ${{ parameters.namespace }}
+          environment: ${{ parameters.environment }}
+
+    - id: publish
+      name: Publicar en GitHub
+      action: publish:github
+      input:
+        repoUrl: github.com?repo=${{ parameters.name }}&owner=ramisistemas
+        description: Servidor MCP generado con el golden path h3-mcp-server
+        repoVisibility: public
+        defaultBranch: main
+        collaborators:
+          - user: ramisistemas
+            access: push
+
+    - id: register
+      name: Registrar en el catálogo
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
+
+  output:
+    links:
+      - title: Repositorio en GitHub
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Abrir en el catálogo
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}
+    text:
+      - title: Servidor MCP generado
+        content: |
+          ## 🔌 Servidor MCP `${{ parameters.name }}` generado
+
+          **Dominio:** ${{ parameters.domain }}
+          **Backend:** ${{ parameters.backendApiUrl }}
+
+          El repo incluye un caso de uso de referencia (pólizas de seguro) para mostrar
+          el patrón completo — renombrar/reemplazar por las tools reales del dominio.
+
+          **Siguientes pasos:**
+          1. Cargar en Key Vault el secreto `${{ parameters.backendApiKeySecretKey }}`
+          2. Renombrar las tools de ejemplo (`get_policy_info`, `get_customer_policies`) por las reales del caso de uso
+          3. Confirmar que los secrets `AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET` de la organización llegan a este repo
+          4. Hacer merge a `main` para disparar el build + push a ACR
+          5. Sincronizar la `Application` de ArgoCD (`deploy/argocd/application.yaml`)

@@ -318,6 +318,10 @@ catalog:
       rules:
         - allow: [Template]
     - type: file
+      target: ../../../golden-paths/h3-innovation/mcp-server/template.yaml
+      rules:
+        - allow: [Template]
+    - type: file
       target: ../../../golden-paths/h3-innovation/rag-application/template.yaml
       rules:
         - allow: [Template]
