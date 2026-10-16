@@ -1,0 +1,14 @@
+site_name: ${{ values.name }}
+site_description: Agente IA (${{ values.profile }}) - dominio ${{ values.domain }}
+
+theme:
+  name: material
+
+plugins:
+  - search
+  - techdocs-core
+
+nav:
+  - Inicio: index.md
+  - TLS corporativo: TLS.md
+  - Excepciones de seguridad: security-exceptions.md

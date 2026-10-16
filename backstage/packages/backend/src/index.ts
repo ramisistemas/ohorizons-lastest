@@ -21,6 +21,7 @@ backend.add(
 );
 // agent-blueprint:create — invoca agent-blueprint-cli (agent-blueprint-cli-archetype)
 backend.add(import('./plugins/scaffolder/agentBlueprintModule'));
+backend.add(import('./plugins/scaffolder/agentBlueprintV2Module'));
 
 // techdocs plugin
 backend.add(import('@backstage/plugin-techdocs-backend'));

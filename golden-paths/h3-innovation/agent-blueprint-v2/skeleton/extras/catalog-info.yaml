@@ -1,0 +1,22 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{ values.name }}
+  description: >-
+    Agente IA (${{ values.profile }}) generado con el Agent Blueprint v2 corporativo,
+    dominio ${{ values.domain }}.
+  tags:
+    - h3-innovation
+    - agent
+    - langgraph
+    - python
+    - blueprint-v2
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: service
+  lifecycle: experimental
+  owner: ${{ values.owner }}
+{%- if values.system %}
+  system: ${{ values.system }}
+{%- endif %}

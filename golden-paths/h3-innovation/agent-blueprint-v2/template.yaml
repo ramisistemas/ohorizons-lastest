@@ -1,0 +1,251 @@
+# =============================================================================
+# OPEN HORIZONS PLATFORM - H3 AGENT BLUEPRINT V2 GOLDEN PATH TEMPLATE
+# =============================================================================
+#
+# Genera un agente IA con el Agent Blueprint CLI v2 corporativo (agent-blueprint-cli
+# 0.3.x): arquitectura hexagonal, LangGraph, LLM Gateway, prompts con fallback, MCP
+# gobernado, A2A, logging JSON, evaluaciones, TLS de SURA, pipeline de Azure DevOps y
+# manifiestos AKS (deploy/conf/<agente>/, formato del repo -conf).
+#
+# Requisitos del backend de Backstage:
+#   - Accion custom "agent-blueprint-v2:create"
+#     (packages/backend/src/plugins/scaffolder/agentBlueprintV2Module.ts).
+#   - CLI v2 instalado en su propio virtualenv (comparte el comando "agent-blueprint"
+#     con la v1) y su ruta en app-config: agentBlueprintV2.command.
+#   El codigo del CLI no se incluye en este repositorio.
+#
+# =============================================================================
+
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: h3-agent-blueprint-v2
+  title: "H3: Agent Blueprint v2 (agente IA corporativo)"
+  description: >
+    Genera un agente IA con el Agent Blueprint CLI v2 corporativo: LangGraph,
+    arquitectura hexagonal, LLM Gateway, MCP gobernado, A2A, TLS de SURA,
+    pipeline de Azure DevOps y manifiestos AKS. Publica el repo (privado) en
+    GitHub y registra el componente en el catálogo.
+  tags:
+    - h3-innovation
+    - agent
+    - langgraph
+    - python
+    - ai
+    - blueprint-v2
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+
+spec:
+  owner: group:default/platform-engineering
+  type: service
+
+  parameters:
+    - title: Datos del agente
+      required:
+        - name
+        - domain
+        - owner
+      properties:
+        name:
+          title: Nombre del agente
+          type: string
+          description: Nombre del repo y del agente (minúsculas y guiones). El paquete Python se deriva de este nombre
+          pattern: '^[a-z][a-z0-9-]{2,40}$'
+          ui:autofocus: true
+        domain:
+          title: Dominio de negocio
+          type: string
+          description: 'Ejemplo: sdlc, seguros, salud'
+          default: sdlc
+        owner:
+          title: Owner
+          type: string
+          description: Equipo dueño del agente
+          ui:field: OwnerPicker
+          ui:options:
+            catalogFilter:
+              kind: Group
+        system:
+          title: System
+          type: string
+          description: Sistema al que pertenece este agente (opcional)
+          ui:field: EntityPicker
+          ui:options:
+            catalogFilter:
+              kind: System
+
+    - title: Perfil
+      required:
+        - profile
+      properties:
+        profile:
+          title: Perfil del agente
+          type: string
+          default: specialist
+          enum:
+            - singular
+            - role-agent
+            - orchestrator
+            - specialist
+          enumNames:
+            - "Singular: agente mínimo expuesto por HTTP"
+            - "Role agent: agente con rol, skills y tools gobernadas"
+            - "Orchestrator: coordina workers (HTTP + A2A)"
+            - "Specialist: subagente de dominio invocable por otro agente (HTTP + A2A)"
+        protocols:
+          title: Protocolos (opcional; vacío = los del perfil)
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              - http
+              - a2a
+              - events
+            enumNames:
+              - "HTTP (/invoke)"
+              - "A2A (Agent Card y JSON-RPC)"
+              - "Eventos (cola o broker)"
+          ui:widget: checkboxes
+        capabilities:
+          title: Capacidades (opcional; vacío = las del perfil)
+          description: Si marca alguna, se generan exactamente las marcadas
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              - llm
+              - mcp-client
+              - skills
+              - policy-client
+              - guardrails
+              - short-term-memory
+              - persistent-memory
+              - opentelemetry
+              - corporate-observability-sdk
+              - token-metrics
+              - structured-logging
+              - evaluations
+            enumNames:
+              - "LLM Gateway"
+              - "Cliente MCP (tools gobernadas por el MCP Gateway)"
+              - "Skills"
+              - "Policy client"
+              - "Guardrails"
+              - "Memoria de corto plazo"
+              - "Memoria persistente"
+              - "OpenTelemetry"
+              - "SDK corporativo de observabilidad (Dynatrace)"
+              - "Métricas de tokens"
+              - "Logging estructurado (JSON)"
+              - "Evaluaciones"
+          ui:widget: checkboxes
+
+    - title: Ejecución y observabilidad (opcional)
+      properties:
+        executionPattern:
+          title: Patrón de ejecución (vacío = el del perfil)
+          type: string
+          enum:
+            - synchronous
+            - asynchronous
+            - mixed
+          enumNames:
+            - "Síncrono"
+            - "Asíncrono"
+            - "Mixto"
+        promptProvider:
+          title: Proveedor de prompts (vacío = el del perfil)
+          type: string
+          enum:
+            - local
+            - remote
+          enumNames:
+            - "Local (archivos del repo, para desarrollo)"
+            - "Remoto (Langfuse, con fallback)"
+        observability:
+          title: Observabilidad (vacío = la del perfil)
+          type: string
+          enum:
+            - noop
+            - otel
+            - corporate-sdk
+          enumNames:
+            - "Sin exportar (noop)"
+            - "OpenTelemetry"
+            - "SDK corporativo (Dynatrace)"
+
+  # ===========================================================================
+  # STEPS
+  # ===========================================================================
+
+  steps:
+    - id: generate-agent
+      name: Generar el agente (Agent Blueprint v2)
+      action: agent-blueprint-v2:create
+      input:
+        name: ${{ parameters.name }}
+        domain: ${{ parameters.domain }}
+        owner: ${{ parameters.owner }}
+        profile: ${{ parameters.profile }}
+        protocols: ${{ parameters.protocols }}
+        capabilities: ${{ parameters.capabilities }}
+        executionPattern: ${{ parameters.executionPattern }}
+        promptProvider: ${{ parameters.promptProvider }}
+        observability: ${{ parameters.observability }}
+
+    - id: fetch-extras
+      name: Agregar registro en el catálogo y documentación
+      action: fetch:template
+      input:
+        url: ./skeleton/extras
+        values:
+          name: ${{ parameters.name }}
+          domain: ${{ parameters.domain }}
+          owner: ${{ parameters.owner }}
+          system: ${{ parameters.system }}
+          profile: ${{ parameters.profile }}
+
+    - id: publish
+      name: Publicar en GitHub
+      action: publish:github
+      input:
+        repoUrl: github.com?repo=${{ parameters.name }}&owner=ramisistemas
+        description: Agente IA (${{ parameters.profile }}) generado con el Agent Blueprint v2
+        # Privado: el código generado proviene del blueprint corporativo
+        repoVisibility: private
+        defaultBranch: main
+
+    - id: register
+      name: Registrar en el catálogo
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
+
+  output:
+    links:
+      - title: Repositorio en GitHub
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Abrir en el catálogo
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}
+    text:
+      - title: Agente IA generado
+        content: |
+          ## 🤖 Agente `${{ parameters.name }}` generado con el Agent Blueprint v2
+
+          **Perfil:** ${{ parameters.profile }}
+          **Dominio:** ${{ parameters.domain }}
+
+          La definición usada queda en `.agent-archetype.yaml` (versión del blueprint, perfil,
+          protocolos y capacidades).
+
+          **Siguientes pasos:**
+          1. Probar en local: `make install`, `make test` y `make run-stub` (sin LLM Gateway ni Langfuse)
+          2. Revisar los manifiestos AKS en `deploy/conf/${{ parameters.name }}/` (formato del repo `-conf`)
+          3. Cargar en Key Vault la API key del LLM Gateway y crear los prompts en Langfuse
+          4. `azure-pipeline.yaml` es el pipeline corporativo de **Azure DevOps**: no se ejecuta en GitHub
+          5. Revisar `docs/TLS.md` y `docs/security-exceptions.md`
